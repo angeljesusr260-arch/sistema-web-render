@@ -4,6 +4,9 @@
 // Buenas prácticas de seguridad: Sin contraseñas en código duro
 // ============================================================
 
+// Desactivar excepciones automáticas para manejar el error limpiamente
+mysqli_report(MYSQLI_REPORT_OFF);
+
 $host = getenv('DB_HOST');
 $port = (int) getenv('DB_PORT');
 $user = getenv('DB_USER');
@@ -15,19 +18,24 @@ if ($port <= 0) {
     $port = 3306;
 }
 
+$conexion = false;
+$error_conexion = "";
+
 // Comprobación de que las variables de entorno existan
 if (!$host || !$user || !$name) {
-    $error_env = "Faltan variables de entorno en Render (DB_HOST, DB_USER, DB_NAME).";
-    $conexion = false;
+    $error_env = "Faltan variables de entorno en Render (revisa DB_HOST, DB_USER, DB_NAME).";
 } else {
-    // Intentar la conexión con el servidor MySQL (Railway)
-    $conexion = @new mysqli($host, $user, $pass, $name, $port);
-    
-    if ($conexion->connect_error) {
-        $error_conexion = "Error de conexión a Railway: " . $conexion->connect_error;
+    try {
+        $conexion = new mysqli($host, $user, $pass, $name, $port);
+        if ($conexion->connect_errno) {
+            $error_conexion = "No se pudo conectar a Railway (" . $conexion->connect_errno . "): " . $conexion->connect_error;
+            $conexion = false;
+        } else {
+            $conexion->set_charset("utf8mb4");
+        }
+    } catch (Throwable $e) {
+        $error_conexion = "Error al conectar a Railway: " . $e->getMessage();
         $conexion = false;
-    } else {
-        $conexion->set_charset("utf8mb4");
     }
 }
 ?>
